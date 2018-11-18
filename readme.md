@@ -3,7 +3,7 @@ This is an extremely rough alpha version of script that will allow you to proxy 
 
 WARNING!
 
-This has been barely tested. I can use it on my windows laptop to proxy connections to older 3750 for ansible ios_facts. I have not tested anything else.
+This has been barely tested. I can use it on my windows laptop with python 3.7 to proxy connections to older 3750 for ansible ios_facts. I have not tested anything else.
 
 ### Usage
 
