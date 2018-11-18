@@ -7,4 +7,4 @@ This has been barely tested. I can use it on my windows laptop with python 3.7 t
 
 ### Usage
 
-Run the scrpt, it will listen on port 2200. Initiate SSH connection, provide username in format username@system_to_proxy_to and password. Hopefully it works after that.
+Run the scrpt, it will listen on port 2200. Initiate SSH connection, provide username in format username@system_to_proxy_to:port and password. Hopefully it works after that.
