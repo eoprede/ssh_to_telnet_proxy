@@ -1,22 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (C) 2003-2007  Robey Pointer <robeypointer@gmail.com>
-#
-# This file is part of paramiko.
-#
-# Paramiko is free software; you can redistribute it and/or modify it under the
-# terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 2.1 of the License, or (at your option)
-# any later version.
-#
-# Paramiko is distributed in the hope that it will be useful, but WITHOUT ANY
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-# A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with Paramiko; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
+# This file is based on paramiko's demo_server example, which has been crudely modified to proxy telnet connections to other devices.
 
 import base64
 from binascii import hexlify
@@ -33,7 +17,8 @@ from telnetlib import Telnet
 
 user =''
 passwd = ''
-
+DoGSSAPIKeyExchange = True
+listen_port = 2200
 
 # setup logging
 paramiko.util.log_to_file("demo_server.log")
@@ -153,91 +138,93 @@ class Server(paramiko.ServerInterface):
         return True
 
 
-DoGSSAPIKeyExchange = True
-
-
 # now connect
 try:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(("", 2200))
+    sock.bind(("", listen_port))
 except Exception as e:
     print("*** Bind failed: " + str(e))
     traceback.print_exc()
     sys.exit(1)
-while True:
-    client = None
-    try:
-        sock.listen(100)
-        print("Listening for connection ...")
-        client, addr = sock.accept()
-    except Exception as e:
-        print("*** Listen/accept failed: " + str(e))
-        traceback.print_exc()
-        sys.exit(1)
 
-    print("Got a connection!")
 
-    try:
-        t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
-        t.set_gss_host(socket.getfqdn(""))
+try:
+    while True:
+        client = None
         try:
-            t.load_server_moduli()
-        except:
-            print("(Failed to load moduli -- gex will be unsupported.)")
-            raise
-        t.add_server_key(host_key)
-        server = Server()
-        try:
-            t.start_server(server=server)
-        except paramiko.SSHException:
-            print("*** SSH negotiation failed.")
+            sock.listen(100)
+            print("Listening for connection ...")
+            client, addr = sock.accept()
+        except Exception as e:
+            print("*** Listen/accept failed: " + str(e))
+            traceback.print_exc()
             sys.exit(1)
 
-        # wait for auth
-        chan = t.accept(20)
-        if chan is None:
-            print("*** No channel.")
-            sys.exit(1)
-        print("Authenticated!")
+        print("Got a connection!")
 
-        server.event.wait(10)
-        if not server.event.is_set():
-            print("*** Client never asked for a shell.")
-            sys.exit(1)
-
-        '''chan.send("\r\n\r\nWelcome to my dorky little BBS!\r\n\r\n")
-        chan.send(
-            "We are on fire all the time!  Hooray!  Candy corn for everyone!\r\n"
-        )
-        chan.send("Happy birthday to Robot Dave!\r\n\r\n")
-        chan.send("Username: ")
-        f = chan.makefile("rU")
-        username = f.readline().strip("\r\n")
-        chan.send("\r\nI don't like you, " + username + ".\r\n")
-        chan.send('\r\n User {0} connected with password {1}\r\n'.format(username, passwd))
-        chan.close()'''
-
-        target = user.split("@")[-1]
-        un = "@".join(user.split("@")[:-1])
-        telnet_port=23
-
-        print ('Connecting to {0}:{1} with {2} {3}'.format(target,str(telnet_port),un,passwd))
-
-        tn = test_tel(target, telnet_port, timeout=10)
-        tn.expect([b"Username: ", b"login: "], 5)
-        tn.write((un + "\r\n").encode('ascii'))
-        tn.expect([b"Password: ", b"password"], 5)
-        tn.write((passwd + "\r\n").encode('ascii'))
-
-        tn.interact()
-        tn.close()
-
-    except Exception as e:
-        print("*** Caught exception: " + str(e.__class__) + ": " + str(e))
-        traceback.print_exc()
         try:
-            t.close()
-        except:
-            pass
-        sys.exit(1)
+            t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
+            t.set_gss_host(socket.getfqdn(""))
+            try:
+                t.load_server_moduli()
+            except:
+                print("(Failed to load moduli -- gex will be unsupported.)")
+                raise
+            t.add_server_key(host_key)
+            server = Server()
+            try:
+                t.start_server(server=server)
+            except paramiko.SSHException:
+                print("*** SSH negotiation failed.")
+                sys.exit(1)
+
+            # wait for auth
+            chan = t.accept(20)
+            if chan is None:
+                print("*** No channel.")
+                sys.exit(1)
+            print("Authenticated!")
+
+            server.event.wait(10)
+            if not server.event.is_set():
+                print("*** Client never asked for a shell.")
+                sys.exit(1)
+
+            target = user.split("@")[-1]
+            if ":" in target:
+                telnet_port = int(target.split(":")[-1])
+                target = ":".join(target.split(":")[:-1])
+            else:
+                telnet_port=23
+            un = "@".join(user.split("@")[:-1])
+            
+            print ('Connecting to {0}:{1} with {2} {3}'.format(target,str(telnet_port),un,passwd))
+
+            tn = test_tel(target, telnet_port, timeout=10)
+            tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
+            tn.write((un + "\r\n").encode('ascii'))
+            tn.expect([b"Password: ", b"password"], 5)
+            tn.write((passwd + "\r\n").encode('ascii'))
+
+            tn.interact()
+            tn.close()
+
+        except ConnectionRefusedError:
+            print ("Connection refused by {0}:{1}".format(target,str(telnet_port)))
+            
+
+        except Exception as e:
+            print("*** Caught exception: " + str(e.__class__) + ": " + str(e))
+            traceback.print_exc()
+            try:
+                t.close()
+            except:
+                pass
+            sys.exit(1)
+
+except KeyboardInterrupt:
+    print('Server closing')
+    sock.close()
+    tn.close()
+    chan.close()
