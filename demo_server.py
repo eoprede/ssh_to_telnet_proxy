@@ -43,6 +43,8 @@ class test_tel(Telnet):
             if not line:
                 break
             try:
+                # GNS3 console requires "\r\n", so I am ensuring that I always send it
+                line = line.rstrip(os.linesep)+"\r\n"
                 self.write(line.encode('ascii'))
             except ConnectionAbortedError:
                 return
@@ -202,10 +204,12 @@ try:
             print ('Connecting to {0}:{1} with {2} {3}'.format(target,str(telnet_port),un,passwd))
 
             tn = test_tel(target, telnet_port, timeout=10)
-            tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
-            tn.write((un + "\r\n").encode('ascii'))
-            tn.expect([b"Password: ", b"password"], 5)
-            tn.write((passwd + "\r\n").encode('ascii'))
+
+            if un != "skip_login":
+                tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
+                tn.write((un + "\r\n").encode('ascii'))
+                tn.expect([b"Password: ", b"password"], 5)
+                tn.write((passwd + "\r\n").encode('ascii'))      
 
             tn.interact()
             tn.close()
