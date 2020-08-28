@@ -10,6 +10,7 @@ import sys
 import threading
 import traceback
 import logging
+import _thread
 
 import paramiko
 from paramiko.py3compat import b, u, decodebytes
@@ -41,7 +42,7 @@ class test_tel(Telnet):
     
     def mt_interact(self):
         """Multithreaded version of interact()."""
-        import _thread
+        logger.debug("multithread")
         _thread.start_new_thread(self.listener, ())
         while 1:
             f = self.chan.makefile("rU")
