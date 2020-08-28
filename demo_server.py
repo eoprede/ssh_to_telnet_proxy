@@ -162,6 +162,7 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
         tn.close()
     except ConnectionRefusedError:
         print ("Connection refused by {0}:{1}".format(target,str(telnet_port)))
+        channel.close()
 
 def main():
 
@@ -245,9 +246,6 @@ def main():
                                               args=(target, telnet_port, 10, chan, un, server.passwd))
                 new_thread.start()
                 
-
-            except ConnectionRefusedError:
-                print ("Connection refused by {0}:{1}".format(target,str(telnet_port)))
 
 
             except Exception as e:
