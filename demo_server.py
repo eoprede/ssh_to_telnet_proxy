@@ -150,9 +150,9 @@ class Server(paramiko.ServerInterface):
         return True
 
 
-def start_telnet(target, telnet_port, timeout=10, channel=None, un="skip_login", passwd=""):
+def start_telnet(target, telnet_port, timeout, channel, un, passwd):
     try:
-        tn = TelnetConnection(target, telnet_port, timeout=10, channel=channel)
+        tn = TelnetConnection(target, telnet_port, timeout=timeout, channel=channel)
         if un != "skip_login":
             tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
             tn.write((un + "\r\n").encode('ascii'))
@@ -239,7 +239,7 @@ def main():
 
                 print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
 
-                start_telnet(target, telnet_port, timeout=10, channel=chan, un=un, passwd=server.passwd)
+                start_telnet(target, telnet_port, 10, chan, un, server.passwd)
                 
 
             except ConnectionRefusedError:
