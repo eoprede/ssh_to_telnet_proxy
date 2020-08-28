@@ -12,6 +12,8 @@ import traceback
 import logging
 import _thread
 
+
+
 import paramiko
 from paramiko.py3compat import b, u, decodebytes
 
@@ -31,7 +33,7 @@ host_key = paramiko.RSAKey(filename="test_rsa.key")
 
 print("Read key: " + u(hexlify(host_key.get_fingerprint())))
 
-class test_tel(Telnet):
+class TelnetConnection(Telnet):
     def __init__(self, target, telnet_port, timeout=10, channel=None):
         super().__init__(target, telnet_port, timeout=10)
         self.chan = channel
@@ -147,6 +149,20 @@ class Server(paramiko.ServerInterface):
     ):
         return True
 
+
+def start_telnet(target, telnet_port, timeout=10, channel=None, un="skip_login", passwd=""):
+    try:
+        tn = TelnetConnection(target, telnet_port, timeout=10, channel=channel)
+        if un != "skip_login":
+            tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
+            tn.write((un + "\r\n").encode('ascii'))
+            tn.expect([b"Password: ", b"password"], 5)
+            tn.write((passwd + "\r\n").encode('ascii'))      
+        tn.interact()
+        tn.close()
+    except ConnectionRefusedError:
+        print ("Connection refused by {0}:{1}".format(target,str(telnet_port)))
+
 def main():
 
 
@@ -223,16 +239,8 @@ def main():
 
                 print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
 
-                tn = test_tel(target, telnet_port, timeout=10, channel=chan)
-
-                if un != "skip_login":
-                    tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
-                    tn.write((un + "\r\n").encode('ascii'))
-                    tn.expect([b"Password: ", b"password"], 5)
-                    tn.write((passwd + "\r\n").encode('ascii'))      
-
-                tn.interact()
-                tn.close()
+                start_telnet(target, telnet_port, timeout=10, channel=chan, un=un, passwd=server.passwd)
+                
 
             except ConnectionRefusedError:
                 print ("Connection refused by {0}:{1}".format(target,str(telnet_port)))
