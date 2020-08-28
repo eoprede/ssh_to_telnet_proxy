@@ -9,16 +9,18 @@ import socket
 import sys
 import threading
 import traceback
+import logging
 
 import paramiko
 from paramiko.py3compat import b, u, decodebytes
 
 from telnetlib import Telnet
 
-user =''
-passwd = ''
+logger = logging.getLogger(__name__)
+
+
 DoGSSAPIKeyExchange = True
-listen_port = 2200
+LISTEN_PORT = 2200
 
 # setup logging
 paramiko.util.log_to_file("demo_server.log")
@@ -78,6 +80,8 @@ class Server(paramiko.ServerInterface):
 
     def __init__(self):
         self.event = threading.Event()
+        self.user = ''
+        self.passwd = ''
 
     def check_channel_request(self, kind, chanid):
         if kind == "session":
@@ -87,10 +91,10 @@ class Server(paramiko.ServerInterface):
     def check_auth_password(self, username, password):
         #if (username == "robey") and (password == "foo"):
             #return paramiko.AUTH_SUCCESSFUL
-        global user
-        global passwd
-        user = username
-        passwd = password
+
+        self.user = username
+        self.passwd = password
+        logger.debug("user: {}; password: {}".format(self.user, self.passwd))
         return paramiko.AUTH_SUCCESSFUL
 
     def check_auth_publickey(self, username, key):
@@ -143,11 +147,21 @@ class Server(paramiko.ServerInterface):
         return True
 
 def main():
+
+
+    logging.basicConfig(level="DEBUG",
+                        format='%(asctime)s '
+                            '%(filename)s: '    
+                            '%(levelname)s: '
+                            '%(funcName)s(): '
+                            '%(lineno)d:\t'
+                            '%(message)s')
+
     # now connect
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("", listen_port))
+        sock.bind(("", LISTEN_PORT))
     except Exception as e:
         print("*** Bind failed: " + str(e))
         traceback.print_exc()
@@ -196,15 +210,17 @@ def main():
                     print("*** Client never asked for a shell.")
                     sys.exit(1)
 
-                target = user.split("@")[-1]
+                target = server.user.split("@")[-1]
                 if ":" in target:
                     telnet_port = int(target.split(":")[-1])
                     target = ":".join(target.split(":")[:-1])
                 else:
                     telnet_port=23
-                un = "@".join(user.split("@")[:-1])
+                un = "@".join(server.user.split("@")[:-1])
 
-                print ('Connecting to {0}:{1} with {2} {3}'.format(target,str(telnet_port),un,passwd))
+                logger.debug("un: <{}>; user: {}".format(un, server.user))
+
+                print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
 
                 tn = test_tel(target, telnet_port, timeout=10, channel=chan)
 
