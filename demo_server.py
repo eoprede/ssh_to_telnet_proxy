@@ -239,7 +239,11 @@ def main():
 
                 print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
 
-                start_telnet(target, telnet_port, 10, chan, un, server.passwd)
+                #start_telnet(target, telnet_port, 10, chan, un, server.passwd)
+                new_thread = threading.Thread(name="telnet_connection",
+                                              target=start_telnet,
+                                              args=(target, telnet_port, 10, chan, un, server.passwd))
+                new_thread.start()
                 
 
             except ConnectionRefusedError:
