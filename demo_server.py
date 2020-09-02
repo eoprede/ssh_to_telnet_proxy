@@ -23,7 +23,18 @@ logger = logging.getLogger(__name__)
 
 
 DoGSSAPIKeyExchange = True
+
 LISTEN_PORT = 2200
+
+TELNET_LOGIN_STRINGS = [
+    b"Username: ", 
+    b"UserName",
+    b"login: ",
+    b"Login: "
+]
+
+TELNET_PASSWORD_STRINGS = [ b"Password: ", b"password"]
+TELNET_LOGIN_TIMEOUT = 5
 
 # setup logging
 paramiko.util.log_to_file("demo_server.log")
@@ -65,7 +76,7 @@ class TelnetConnection(Telnet):
                 data = self.read_very_eager()
             except EOFError:
                 print('*** Connection closed by remote host ***')
-                self.chan.close()
+                #self.chan.close()
                 return
             if data:
                 self.chan.send(data.decode('ascii'))
@@ -97,7 +108,6 @@ class Server(paramiko.ServerInterface):
 
         self.user = username
         self.passwd = password
-        logger.debug("user: {}; password: {}".format(self.user, self.passwd))
         return paramiko.AUTH_SUCCESSFUL
 
     def check_auth_publickey(self, username, key):
@@ -154,9 +164,9 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
     try:
         tn = TelnetConnection(target, telnet_port, timeout=timeout, channel=channel)
         if un != "skip_login":
-            tn.expect([b"Username: ", b"login: ", b"Login: "], 5)
+            tn.expect(TELNET_LOGIN_STRINGS, TELNET_LOGIN_TIMEOUT)
             tn.write((un + "\r\n").encode('ascii'))
-            tn.expect([b"Password: ", b"password"], 5)
+            tn.expect(TELNET_PASSWORD_STRINGS, TELNET_LOGIN_TIMEOUT)
             tn.write((passwd + "\r\n").encode('ascii'))      
         tn.interact()
         tn.close()
@@ -260,8 +270,6 @@ def main():
     except KeyboardInterrupt:
         print('Server closing')
         sock.close()
-        tn.close()
-        chan.close()
 
 
 if __name__ == "__main__":
