@@ -39,6 +39,7 @@ TELNET_LOGIN_STRINGS = [
 TELNET_PASSWORD_STRINGS = [ b"Password: ", b"password"]
 TELNET_LOGIN_TIMEOUT = 5
 SSH_KEY = "test_rsa.key"
+LOGFILE = "demo_server.log"
 
 
 class TelnetConnection(Telnet):
@@ -73,21 +74,15 @@ class TelnetConnection(Telnet):
                 data = self.read_very_eager()
             except EOFError:
                 print('*** Connection closed by remote host ***')
-                self.chan.close()
+                try:
+                    self.chan.close()
+                except EOFError:
+                    return
                 return
             if data:
                 self.chan.send(data.decode('ascii'))
 
 class Server(paramiko.ServerInterface):
-    # 'data' is the output of base64.b64encode(key)
-    # (using the "user_rsa_key" files)
-    data = (
-        b"AAAAB3NzaC1yc2EAAAABIwAAAIEAyO4it3fHlmGZWJaGrfeHOVY7RWO3P9M7hp"
-        b"fAu7jJ2d7eothvfeuoRFtJwhUmZDluRdFyhFY/hFAh76PJKGAusIqIQKlkJxMC"
-        b"KDqIexkgHAfID/6mqvmnSJf0b5W8v5h2pI/stOSwTQ+pxVhwJ9ctYDhRSlF0iT"
-        b"UWT10hcuO4Ks8="
-    )
-    good_pub_key = paramiko.RSAKey(data=decodebytes(data))
 
     def __init__(self):
         self.event = threading.Event()
@@ -107,11 +102,6 @@ class Server(paramiko.ServerInterface):
         self.passwd = password
         return paramiko.AUTH_SUCCESSFUL
 
-    def check_auth_publickey(self, username, key):
-        print("Auth attempt with key: " + u(hexlify(key.get_fingerprint())))
-        if (username == "robey") and (key == self.good_pub_key):
-            return paramiko.AUTH_SUCCESSFUL
-        return paramiko.AUTH_FAILED
 
     def check_auth_gssapi_with_mic(
         self, username, gss_authenticated=paramiko.AUTH_FAILED, cc_file=None
@@ -172,47 +162,57 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
         channel.close()
     except OSError:
         print("Error in the connection to {0}:{1}".format(target,str(telnet_port)))
-    finally:
         channel.close()
+    except EOFError:
+        print("Session terminated to {0}:{1}".format(target,str(telnet_port)))
 
 
 
 def start_ssh_session_thread(client=None, host_key=None):
-    logger.debug("test")
-    t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
-    t.set_gss_host(socket.getfqdn(""))
     try:
-        t.load_server_moduli()
-    except:
-        print("(Failed to load moduli -- gex will be unsupported.)")
-        raise
-    t.add_server_key(host_key)
-    server = Server()
-    try:
-        t.start_server(server=server)
-    except paramiko.SSHException:
-        print("*** SSH negotiation failed.")
+        logger.debug("test")
+        t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
+        t.set_gss_host(socket.getfqdn(""))
+        try:
+            t.load_server_moduli()
+        except:
+            print("(Failed to load moduli -- gex will be unsupported.)")
+            raise
+        t.add_server_key(host_key)
+        server = Server()
+        try:
+            t.start_server(server=server)
+        except paramiko.SSHException:
+            print("*** SSH negotiation failed.")
+            sys.exit(1)
+        # wait for auth
+        chan = t.accept(20)
+        if chan is None:
+            print("*** No channel.")
+            sys.exit(1)
+        print("Authenticated!")
+        server.event.wait(10)
+        if not server.event.is_set():
+            print("*** Client never asked for a shell.")
+            sys.exit(1)
+        target = server.user.split("@")[-1]
+        if ":" in target:
+            telnet_port = int(target.split(":")[-1])
+            target = ":".join(target.split(":")[:-1])
+        else:
+            telnet_port=23
+        un = "@".join(server.user.split("@")[:-1])
+        logger.debug("un: <{}>; user: {}".format(un, server.user))
+        print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
+        start_telnet(target, telnet_port, 10, chan, un, server.passwd)
+    except Exception as e:
+        logger.error("*** Caught exception: " + str(e.__class__) + ": " + str(e))
+        traceback.print_exc()
+        try:
+            t.close()
+        except:
+            pass
         sys.exit(1)
-    # wait for auth
-    chan = t.accept(20)
-    if chan is None:
-        print("*** No channel.")
-        sys.exit(1)
-    print("Authenticated!")
-    server.event.wait(10)
-    if not server.event.is_set():
-        print("*** Client never asked for a shell.")
-        sys.exit(1)
-    target = server.user.split("@")[-1]
-    if ":" in target:
-        telnet_port = int(target.split(":")[-1])
-        target = ":".join(target.split(":")[:-1])
-    else:
-        telnet_port=23
-    un = "@".join(server.user.split("@")[:-1])
-    logger.debug("un: <{}>; user: {}".format(un, server.user))
-    print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
-    start_telnet(target, telnet_port, 10, chan, un, server.passwd)
 
 
 def load_arguments():
@@ -230,6 +230,11 @@ def load_arguments():
                         help="Port that will be used to setup ssh server. By default is port {port}".format(port=LISTEN_PORT))
     parser.add_argument('-v', '--version', dest='version', required=False, action='store_true', default=False,
                         help="Print version")
+    parser.add_argument('-k', '--key', dest='key', required=False, type=str, default=SSH_KEY,
+                        help="ssh private key that will be used by the server")
+    parser.add_argument('-f', '--logfile', dest='logfile', required=False, type=str, default=LOGFILE,
+                        help="paramiko logfile")
+
 
     # Parse arguments
     args = parser.parse_args()
@@ -258,12 +263,10 @@ def main():
                             '%(message)s')
 
     # setup paramiko local logging
-    paramiko.util.log_to_file("demo_server.log")
-
+    paramiko.util.log_to_file(args.logfile)
+    # Define server key
     host_key = paramiko.RSAKey(filename=SSH_KEY)
-    # host_key = paramiko.DSSKey(filename='test_dss.key')
 
-    #print("Read key: " + u(hexlify(host_key.get_fingerprint())))
     # now connect
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -295,16 +298,9 @@ def main():
                                               kwargs={"client": client, "host_key": host_key})
                 logger.debug("before starting thread")
                 new_thread.start()
-                
-
-
             except Exception as e:
-                print("*** Caught exception: " + str(e.__class__) + ": " + str(e))
+                logger.error("*** Caught exception: " + str(e.__class__) + ": " + str(e))
                 traceback.print_exc()
-                try:
-                    t.close()
-                except:
-                    pass
                 sys.exit(1)
 
     except KeyboardInterrupt:
