@@ -38,14 +38,8 @@ TELNET_LOGIN_STRINGS = [
 
 TELNET_PASSWORD_STRINGS = [ b"Password: ", b"password"]
 TELNET_LOGIN_TIMEOUT = 5
+SSH_KEY = "test_rsa.key"
 
-# setup logging
-paramiko.util.log_to_file("demo_server.log")
-
-host_key = paramiko.RSAKey(filename="test_rsa.key")
-# host_key = paramiko.DSSKey(filename='test_dss.key')
-
-print("Read key: " + u(hexlify(host_key.get_fingerprint())))
 
 class TelnetConnection(Telnet):
     def __init__(self, target, telnet_port, timeout=10, channel=None):
@@ -183,7 +177,7 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
 
 
 
-def start_ssh_session_thread(client=None):
+def start_ssh_session_thread(client=None, host_key=None):
     logger.debug("test")
     t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
     t.set_gss_host(socket.getfqdn(""))
@@ -252,6 +246,8 @@ def main():
         print("template_render" + " : " + __version__)
         sys.exit(0)
 
+
+
     # set logging basic configuration
     logging.basicConfig(level=args.loglevel.upper(),
                         format='%(asctime)s '
@@ -261,6 +257,13 @@ def main():
                             '%(lineno)d:\t'
                             '%(message)s')
 
+    # setup paramiko local logging
+    paramiko.util.log_to_file("demo_server.log")
+
+    host_key = paramiko.RSAKey(filename=SSH_KEY)
+    # host_key = paramiko.DSSKey(filename='test_dss.key')
+
+    #print("Read key: " + u(hexlify(host_key.get_fingerprint())))
     # now connect
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -289,7 +292,7 @@ def main():
             try:
                 new_thread = threading.Thread(name="ssh_session",
                                               target=start_ssh_session_thread,
-                                              kwargs={"client": client})
+                                              kwargs={"client": client, "host_key": host_key})
                 logger.debug("before starting thread")
                 new_thread.start()
                 
