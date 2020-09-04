@@ -11,7 +11,7 @@ import threading
 import traceback
 import logging
 import _thread
-
+import argparse
 
 
 import paramiko
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 __version__ = "0.1.1rc1"
-
+__license__ = "MIT"
 
 DoGSSAPIKeyExchange = True
 
@@ -221,10 +221,39 @@ def start_ssh_session_thread(client=None):
     start_telnet(target, telnet_port, 10, chan, un, server.passwd)
 
 
+def load_arguments():
+    """ Function used to process command line arguments
+    
+    Returns:
+        [dict] -- dictionary with arguments parsed
+    """    
+      # Define parser
+    parser = argparse.ArgumentParser(
+        description="Utility used to generate configuration templates")
+    parser.add_argument('-l', '--log', type=str, dest='loglevel', default='info', choices=['error', 'debug', 'info', 'critical', 'warning'],
+                        help="Set the log level DEBUG,INFO,... (default = info)")
+    parser.add_argument('-p', '--port', type=int, dest='port', default=LISTEN_PORT, required=False,
+                        help="Port that will be used to setup ssh server. By default is port {port}".format(port=LISTEN_PORT))
+    parser.add_argument('-v', '--version', dest='version', required=False, action='store_true', default=False,
+                        help="Print version")
+
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # return arguments parsed
+    return args
+
+
 def main():
 
+    args = load_arguments()
+    # print version and exit
+    if args.version:
+        print("template_render" + " : " + __version__)
+        sys.exit(0)
 
-    logging.basicConfig(level="DEBUG",
+    # set logging basic configuration
+    logging.basicConfig(level=args.loglevel.upper(),
                         format='%(asctime)s '
                             '%(filename)s: '    
                             '%(levelname)s: '
@@ -236,7 +265,7 @@ def main():
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("", LISTEN_PORT))
+        sock.bind(("", args.port))
     except Exception as e:
         print("*** Bind failed: " + str(e))
         traceback.print_exc()
