@@ -22,6 +22,9 @@ from telnetlib import Telnet
 logger = logging.getLogger(__name__)
 
 
+__version__ = "0.1.0rc1"
+
+
 DoGSSAPIKeyExchange = True
 
 LISTEN_PORT = 2200
@@ -76,7 +79,7 @@ class TelnetConnection(Telnet):
                 data = self.read_very_eager()
             except EOFError:
                 print('*** Connection closed by remote host ***')
-                #self.chan.close()
+                self.chan.close()
                 return
             if data:
                 self.chan.send(data.decode('ascii'))
@@ -171,7 +174,11 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
         tn.interact()
         tn.close()
     except ConnectionRefusedError:
-        print ("Connection refused by {0}:{1}".format(target,str(telnet_port)))
+        print("Connection refused by {0}:{1}".format(target,str(telnet_port)))
+        channel.close()
+    except OSError:
+        print("Error in the connection to {0}:{1}".format(target,str(telnet_port)))
+    finally:
         channel.close()
 
 def main():
