@@ -170,7 +170,6 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
 
 def start_ssh_session_thread(client=None, host_key=None):
     try:
-        logger.debug("test")
         t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
         t.set_gss_host(socket.getfqdn(""))
         try:
@@ -246,7 +245,7 @@ def load_arguments():
 def main():
 
     args = load_arguments()
-    # print version and exit
+    # display version and exit
     if args.version:
         print("template_render" + " : " + __version__)
         sys.exit(0)
@@ -296,7 +295,6 @@ def main():
                 new_thread = threading.Thread(name="ssh_session",
                                               target=start_ssh_session_thread,
                                               kwargs={"client": client, "host_key": host_key})
-                logger.debug("before starting thread")
                 new_thread.start()
             except Exception as e:
                 logger.error("*** Caught exception: " + str(e.__class__) + ": " + str(e))
