@@ -1,0 +1,7 @@
+dist/
+build/
+*.egg-info
+.env
+.devcontainer
+.scannerwork
+.vscode

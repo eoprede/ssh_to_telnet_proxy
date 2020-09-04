@@ -37,7 +37,7 @@ TELNET_LOGIN_STRINGS = [
 TELNET_PASSWORD_STRINGS = [ b"Password: ", b"password"]
 TELNET_LOGIN_TIMEOUT = 5
 SSH_KEY = "test_rsa.key"
-LOGFILE = "demo_server.log"
+LOGFILE = "ssh_to_telnet_proxy.log"
 
 
 class TelnetConnection(Telnet):
@@ -220,7 +220,7 @@ def load_arguments():
     """    
       # Define parser
     parser = argparse.ArgumentParser(
-        description="Utility used to generate configuration templates")
+        description="Proxy that translates SSH into telnet sessions")
     parser.add_argument('-l', '--log', type=str, dest='loglevel', default='info', choices=['error', 'debug', 'info', 'critical', 'warning'],
                         help="Set the log level DEBUG,INFO,... (default = info)")
     parser.add_argument('-p', '--port', type=int, dest='port', default=LISTEN_PORT, required=False,
@@ -245,7 +245,7 @@ def main():
     args = load_arguments()
     # display version and exit
     if args.version:
-        print("template_render" + " : " + __version__)
+        print("ssh_to_telnet_proxy" + " : " + __version__)
         sys.exit(0)
 
 
