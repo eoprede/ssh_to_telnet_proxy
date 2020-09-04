@@ -181,6 +181,46 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
     finally:
         channel.close()
 
+
+
+def start_ssh_session_thread(client=None):
+    logger.debug("test")
+    t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
+    t.set_gss_host(socket.getfqdn(""))
+    try:
+        t.load_server_moduli()
+    except:
+        print("(Failed to load moduli -- gex will be unsupported.)")
+        raise
+    t.add_server_key(host_key)
+    server = Server()
+    try:
+        t.start_server(server=server)
+    except paramiko.SSHException:
+        print("*** SSH negotiation failed.")
+        sys.exit(1)
+    # wait for auth
+    chan = t.accept(20)
+    if chan is None:
+        print("*** No channel.")
+        sys.exit(1)
+    print("Authenticated!")
+    server.event.wait(10)
+    if not server.event.is_set():
+        print("*** Client never asked for a shell.")
+        sys.exit(1)
+    target = server.user.split("@")[-1]
+    if ":" in target:
+        telnet_port = int(target.split(":")[-1])
+        target = ":".join(target.split(":")[:-1])
+    else:
+        telnet_port=23
+    un = "@".join(server.user.split("@")[:-1])
+    logger.debug("un: <{}>; user: {}".format(un, server.user))
+    print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
+    start_telnet(target, telnet_port, 10, chan, un, server.passwd)
+
+
 def main():
 
 
@@ -218,49 +258,10 @@ def main():
             print("Got a connection!")
 
             try:
-                t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
-                t.set_gss_host(socket.getfqdn(""))
-                try:
-                    t.load_server_moduli()
-                except:
-                    print("(Failed to load moduli -- gex will be unsupported.)")
-                    raise
-                t.add_server_key(host_key)
-                server = Server()
-                try:
-                    t.start_server(server=server)
-                except paramiko.SSHException:
-                    print("*** SSH negotiation failed.")
-                    sys.exit(1)
-
-                # wait for auth
-                chan = t.accept(20)
-                if chan is None:
-                    print("*** No channel.")
-                    sys.exit(1)
-                print("Authenticated!")
-
-                server.event.wait(10)
-                if not server.event.is_set():
-                    print("*** Client never asked for a shell.")
-                    sys.exit(1)
-
-                target = server.user.split("@")[-1]
-                if ":" in target:
-                    telnet_port = int(target.split(":")[-1])
-                    target = ":".join(target.split(":")[:-1])
-                else:
-                    telnet_port=23
-                un = "@".join(server.user.split("@")[:-1])
-
-                logger.debug("un: <{}>; user: {}".format(un, server.user))
-
-                print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
-
-                #start_telnet(target, telnet_port, 10, chan, un, server.passwd)
-                new_thread = threading.Thread(name="telnet_connection",
-                                              target=start_telnet,
-                                              args=(target, telnet_port, 10, chan, un, server.passwd))
+                new_thread = threading.Thread(name="ssh_session",
+                                              target=start_ssh_session_thread,
+                                              kwargs={"client": client})
+                logger.debug("before starting thread")
                 new_thread.start()
                 
 
