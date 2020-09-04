@@ -2,8 +2,6 @@
 
 # This file is based on paramiko's demo_server example, which has been crudely modified to proxy telnet connections to other devices.
 
-import base64
-from binascii import hexlify
 import os
 import socket
 import sys
@@ -264,7 +262,7 @@ def main():
     # setup paramiko local logging
     paramiko.util.log_to_file(args.logfile)
     # Define server key
-    host_key = paramiko.RSAKey(filename=SSH_KEY)
+    host_key = paramiko.RSAKey(filename=args.key)
 
     # now connect
     try:
