@@ -10,7 +10,7 @@ import traceback
 import logging
 import _thread
 import argparse
-
+import signal
 
 import paramiko
 from paramiko.py3compat import b, u, decodebytes
@@ -200,7 +200,7 @@ def start_ssh_session_thread(client=None, host_key=None):
             telnet_port=23
         un = "@".join(server.user.split("@")[:-1])
         logger.debug("un: <{}>; user: {}".format(un, server.user))
-        print ('Connecting to {0}:{1} with {2} {3}'.format(target, str(telnet_port), un, server.passwd))
+        print ('Connecting to {0}:{1} with user {2}'.format(target, str(telnet_port), un))
         start_telnet(target, telnet_port, 10, chan, un, server.passwd)
     except Exception as e:
         logger.error("*** Caught exception: " + str(e.__class__) + ": " + str(e))
@@ -239,9 +239,15 @@ def load_arguments():
     # return arguments parsed
     return args
 
+def signal_handler(sig, frame):
+    logger.debug('Exiting {}'.format(__file__))
+    sys.exit(0)
+
 
 def main():
-
+    # exit script upon CTRL+C
+    signal.signal(signal.SIGINT, signal_handler)
+    # process script arguments
     args = load_arguments()
     # display version and exit
     if args.version:
@@ -302,6 +308,7 @@ def main():
     except KeyboardInterrupt:
         print('Server closing')
         sock.close()
+
 
 
 if __name__ == "__main__":
