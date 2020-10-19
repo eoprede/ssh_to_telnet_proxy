@@ -29,7 +29,7 @@ LISTEN_PORT = 2200
 
 TELNET_LOGIN_STRINGS = [
     b"Username: ", 
-    b"UserName",
+    b"UserName: ",
     b"login: ",
     b"Login: "
 ]
@@ -47,7 +47,6 @@ class TelnetConnection(Telnet):
 
     def interact(self):
         self.mt_interact()
-        return
     
     def mt_interact(self):
         """Multithreaded version of interact()."""
@@ -146,6 +145,7 @@ class Server(paramiko.ServerInterface):
 
 
 def start_telnet(target, telnet_port, timeout, channel, un, passwd):
+    logger.debug("Entering function")
     try:
         tn = TelnetConnection(target, telnet_port, timeout=timeout, channel=channel)
         if un != "skip_login":
@@ -167,15 +167,20 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
 
 
 def start_ssh_session_thread(client=None, host_key=None):
+    logger.debug("Enter function")
     try:
         t = paramiko.Transport(client, gss_kex=DoGSSAPIKeyExchange)
-        t.set_gss_host(socket.getfqdn(""))
+        logger.debug("set gss host")
+#        t.set_gss_host(socket.gethostname())
+        logger.debug("load server moduli")
         try:
             t.load_server_moduli()
         except:
             print("(Failed to load moduli -- gex will be unsupported.)")
             raise
+        logger.debug("add server key")
         t.add_server_key(host_key)
+        logger.debug("start server")
         server = Server()
         try:
             t.start_server(server=server)
@@ -192,6 +197,7 @@ def start_ssh_session_thread(client=None, host_key=None):
         if not server.event.is_set():
             print("*** Client never asked for a shell.")
             sys.exit(1)
+        logger.debug("Obtain user and password")
         target = server.user.split("@")[-1]
         if ":" in target:
             telnet_port = int(target.split(":")[-1])
