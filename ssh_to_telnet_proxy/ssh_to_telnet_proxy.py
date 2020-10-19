@@ -20,7 +20,7 @@ from telnetlib import Telnet
 logger = logging.getLogger(__name__)
 
 
-__version__ = "0.1.1"
+__version__ = "0.1.2rc1"
 __license__ = "MIT"
 
 DoGSSAPIKeyExchange = True
