@@ -55,7 +55,9 @@ class TelnetConnection(Telnet):
         while 1:
             f = self.chan.makefile("rU")
             line = f.readline()
+            logger.debug(line)
             if not line:
+                logger.debug("not line")
                 break
             try:
                 # GNS3 console requires "\r\n", so I am ensuring that I always send it
@@ -77,7 +79,10 @@ class TelnetConnection(Telnet):
                     return
                 return
             if data:
-                self.chan.send(data.decode('ascii'))
+                logger.debug(data)
+                for line in data.decode('ascii').splitlines(True):
+                    logger.debug(line)
+                    self.chan.send(line)
 
 class Server(paramiko.ServerInterface):
 
