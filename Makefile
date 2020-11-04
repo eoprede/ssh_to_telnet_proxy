@@ -12,8 +12,8 @@ test: clean
 	nosetests --with-xunit -v
 	coverage erase
 	coverage run -m pytest -v
-	coverage xml
-	coverage html
+	coverage xml --include="./*" --omit="./test*"
+	coverage html --include="./*" --omit="./test*"  
 
 sonar: test
 	sonar-scanner
