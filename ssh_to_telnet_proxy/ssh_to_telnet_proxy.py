@@ -11,6 +11,7 @@ import logging
 import _thread
 import argparse
 import signal
+import re
 
 import paramiko
 from paramiko.py3compat import b, u, decodebytes
@@ -40,6 +41,9 @@ TELNET_PASSWORD_STRINGS = [ b"Password: ", b"password"]
 TELNET_LOGIN_TIMEOUT = 5
 SSH_KEY = "test_rsa.key"
 LOGFILE = "ssh_to_telnet_proxy.log"
+
+# TELNET TERMINAL ESCAPE CHARACTERS
+TELNET_ESCAPE_REGEXP = r'(\x1b\[\d+;\d+\S|\x1b\[\?\d+\S|\x1b\[\d+\S|\x1bE)'
 
 
 class TelnetConnection(Telnet):
@@ -82,9 +86,11 @@ class TelnetConnection(Telnet):
                 return
             if data:
                 logger.debug(data)
-                for line in data.decode('ascii').splitlines(True):
-                    logger.debug(line)
-                    self.chan.send(line)
+                for index, line in enumerate(data.decode('ascii').splitlines(True)):
+                    logger.debug("[{:03d}]: {}".format(index, repr(line)))
+                    new_line = re.sub(TELNET_ESCAPE_REGEXP, '', line).replace('\r', '')
+                    logger.debug("[{:03d}]: {}".format(index, repr(new_line)))
+                    self.chan.send(new_line)
 
 class Server(paramiko.ServerInterface):
 
