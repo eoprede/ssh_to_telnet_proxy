@@ -31,7 +31,9 @@ TELNET_LOGIN_STRINGS = [
     b"Username: ", 
     b"UserName: ",
     b"login: ",
-    b"Login: "
+    b"Login: ",
+    b" name:",
+    b" any key"
 ]
 
 TELNET_PASSWORD_STRINGS = [ b"Password: ", b"password"]
@@ -148,13 +150,17 @@ class Server(paramiko.ServerInterface):
     ):
         return True
 
-
+# Pending of making a FSM to control login
 def start_telnet(target, telnet_port, timeout, channel, un, passwd):
     logger.debug("Entering function")
     try:
         tn = TelnetConnection(target, telnet_port, timeout=timeout, channel=channel)
         if un != "skip_login":
-            tn.expect(TELNET_LOGIN_STRINGS, TELNET_LOGIN_TIMEOUT)
+            case = tn.expect(TELNET_LOGIN_STRINGS, TELNET_LOGIN_TIMEOUT)
+            logger.debug(case)
+            if case[0] == 5:
+                tn.write("\n".encode('ascii'))
+                case = tn.expect(TELNET_LOGIN_STRINGS, TELNET_LOGIN_TIMEOUT)
             tn.write((un + "\r\n").encode('ascii'))
             tn.expect(TELNET_PASSWORD_STRINGS, TELNET_LOGIN_TIMEOUT)
             tn.write((passwd + "\r\n").encode('ascii'))      
