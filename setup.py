@@ -5,7 +5,7 @@ with open("README.md", "r") as fd:
 
 setuptools.setup(
     name="ssh_to_telnet_proxy",
-    version="0.1.2",
+    version="0.1.3rc1",
     description="SSH to telnet proxy",
     long_description=long_description,
     long_description_content_type="text/markdown",
