@@ -22,6 +22,8 @@ sonar: test
 build: 
 	python3 setup.py sdist bdist_wheel
 
+rebuild: clean build
+
 install:
 	pip3 install dist/*.whl
 

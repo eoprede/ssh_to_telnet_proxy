@@ -43,7 +43,11 @@ SSH_KEY = "test_rsa.key"
 LOGFILE = "ssh_to_telnet_proxy.log"
 
 # TELNET TERMINAL ESCAPE CHARACTERS
-TELNET_ESCAPE_REGEXP = r'(\x1b\[\d+;\d+\S|\x1b\[\?\d+\S|\x1b\[\d+\S|\x1bE)'
+TELNET_ESCAPE_REGEXP = r'(\x1b\[\d+;\d+\S|\x1b\[\?\d+\S|\x1b\[\d+\S|\x1bE)+'
+# REGEX to capture all characters between move cursor to first column ansi escape codes http://ascii-table.com/ansi-escape-sequences.php
+TELNET_ESCAPE_NEWLINES = r'\x1b\[24;1H(\x1b\[\d+;\d+\S|\x1b\[\?\d+\S|\x1b\[\d+\S|\x1bE)*\x1b\[24;1H'
+# Move cursor to first column ascii code
+TELNET_BEGIN_LINE_EXP = r'\x1b\[24;1H'
 
 
 class TelnetConnection(Telnet):
@@ -87,9 +91,12 @@ class TelnetConnection(Telnet):
             if data:
                 logger.debug(data)
                 for index, line in enumerate(data.decode('ascii').splitlines(True)):
-                    logger.debug("[{:03d}]: {}".format(index, repr(line)))
-                    new_line = re.sub(TELNET_ESCAPE_REGEXP, '', line).replace('\r', '')
-                    logger.debug("[{:03d}]: {}".format(index, repr(new_line)))
+                    logger.debug("[{:03d}][BEFORE]: {}".format(index, repr(line)))
+                    # substitude first ocurrence of all codes between two move cursor to first column ansi code with \n
+                    new_line = re.sub(TELNET_ESCAPE_NEWLINES, '\n', line, count=1)
+                    # remove all ansi codes and carriage returns
+                    new_line = re.sub(TELNET_ESCAPE_REGEXP, '', new_line).replace('\r', '')
+                    logger.debug("[{:03d}][ AFTER]: {}".format(index, repr(new_line)))
                     self.chan.send(new_line)
 
 class Server(paramiko.ServerInterface):
