@@ -9,11 +9,11 @@ clean:
 	find . -name '*.pyc' | while read line; do rm "$$line"; done
 
 test: clean
-	nosetests --with-xunit -v
-	coverage erase
-	coverage run -m pytest -v
-	coverage xml --include="./*" --omit="./test*"
-	coverage html --include="./*" --omit="./test*"  
+#	nosetests --with-xunit -v
+#	coverage erase
+#	coverage run -m pytest -v
+#	coverage xml --include="./*" --omit="./test*"
+#	coverage html --include="./*" --omit="./test*"  
 
 sonar: test
 	sonar-scanner
