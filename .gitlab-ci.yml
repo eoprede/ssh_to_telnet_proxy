@@ -81,5 +81,5 @@ deploy_release:
   - export VERSION=$(grep -i version setup.py | cut -d'"' -f2 | cut -d'"' -f1 | tr '[:upper:]' '[:lower:]')
   - echo $VERSION
   - if echo $VERSION | grep -q -E "^[0-9]+\.[0-9]+\.[0-9]+$"; then export TWINE_REPOSITORY_URL="${PYPI_REPOSITORY_BASE_URL}pypi-releases/"; else echo "RELEASE NAME NOT CORRECT -> $VERSION";false;fi
-  - export TWINE_CERT="$PWD/kojak.pem"
+  - export TWINE_CERT="/usr/local/share/ca-certificates/kojak.crt"
   - python3 -m twine upload dist/*
