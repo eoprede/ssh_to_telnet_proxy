@@ -76,6 +76,25 @@ class TelnetConnection(Telnet):
             except ConnectionAbortedError:
                 return
 
+    def decode_lines(self, data):
+
+        logger.debug(data)
+        lines = []
+        # First try to decode as ascii
+        try:
+            lines = data.decode('ascii').splitlines(True)
+        except UnicodeDecodeError as e:
+            # IF ascii fails try to decode as utf-8
+            logger.debug("Error decoding as ascii: {}".format(e))
+            try:
+                lines = data.decode('utf-8').splitlines(True)
+            # last option: try to decode as cp1252
+            except UnicodeDecodeError as e:
+                logger.debug("error decoding as unicode")
+                lines = data.decode('cp1252').splitlines(True)
+        return lines
+
+
     def listener(self):
         """Helper for mt_interact() -- this executes in the other thread."""
         while 1:
@@ -89,8 +108,9 @@ class TelnetConnection(Telnet):
                     return
                 return
             if data:
-                logger.debug(data)
-                for index, line in enumerate(data.decode('ascii').splitlines(True)):
+                # try to decode data as ascii, utf-8 or cp1252
+                lines = self.decode_lines(data)
+                for index, line in enumerate(lines):
                     logger.debug("[{:03d}][BEFORE]: {}".format(index, repr(line)))
                     # substitude first ocurrence of all codes between two move cursor to first column ansi code with \n
                     new_line = re.sub(TELNET_ESCAPE_NEWLINES, '\n', line, count=1)
