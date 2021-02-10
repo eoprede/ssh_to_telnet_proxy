@@ -9,7 +9,7 @@ test:
   tags:
   - python3
   script:
-  - pip3 install -i https://nexus.srv.satec.es/repository/pypi-public/simple --cert kojak.pem -r test-requirements.txt
+  - pip3 install -i https://nexus.srv.satec.es/repository/pypi-public/simple --cert --cert /usr/local/share/ca-certificates/kojak.crt  -r test-requirements.txt
   - make sonar
 
 

@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 
-ExecStart=/usr/local/bin/ssh_to_telnet_proxy -k /root/.ssh/aaas-id_rsa -p 2200
+ExecStart=/usr/local/bin/ssh_to_telnet_proxy -k /root/.ssh/id_rsa -p 2200
 
 Restart=on-failure
 RestartSec=10s
