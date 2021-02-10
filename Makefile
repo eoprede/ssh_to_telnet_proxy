@@ -25,7 +25,7 @@ build:
 rebuild: clean build
 
 install:
-	pip3 install dist/*.whl
+	pip3 install dist/*.tar.gz
 
 uninstall:
 	pip3 uninstall -y $$(grep name setup.py | cut -d'"' -f 2| cut -d'"' -f 1)

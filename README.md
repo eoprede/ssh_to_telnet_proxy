@@ -4,6 +4,7 @@
   - [Requirements](#requirements)
   - [Installation via `make`](#installation-via-make)
 - [Uninstall](#uninstall)
+- [Systemd service](#systemd-service)
 - [Pending](#pending)
 
 # Introduction
@@ -84,6 +85,37 @@ Use `make` to uninstall it
 ```
 sudo make uninstall
 ```
+
+# Systemd service
+
+[`ssh2telnet.service`](systemd/ssh2telnet.service) is included. It will be automatically installed to
+`/etc/systemd/system` so the proxy starts at boot. If service is killed it will be restarted as well.
+
+It is called with key=`/root/.ssh/id_rsa` and default port `2200`.
+
+``` ini
+[Unit]
+Description=SSH to Telnet service to access secure some telnet devices.
+
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+ExecStart=/usr/local/bin/ssh_to_telnet_proxy -k /root/.ssh/id_rsa -p 2200
+
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=300
+StartLimitBurst=0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
 
 # Pending
 

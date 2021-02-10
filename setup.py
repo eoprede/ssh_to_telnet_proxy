@@ -11,6 +11,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/khornem/ssh_to_telnet_proxy",
     packages=['ssh_to_telnet_proxy'],
+    data_files=[('/etc/systemd/system',['systemd/ssh2telnet.service'])],
     entry_points = {
         'console_scripts': ['ssh_to_telnet_proxy=ssh_to_telnet_proxy.ssh_to_telnet_proxy:main'],
     },
