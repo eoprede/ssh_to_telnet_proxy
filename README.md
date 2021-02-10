@@ -119,5 +119,5 @@ WantedBy=multi-user.target
 
 # Pending
 
-- [ ]: Define tests
-- [ ]: Test windows compatibiity
+- [ ] Define tests
+- [ ] Test windows compatibiity
