@@ -5,3 +5,4 @@ build/
 .devcontainer
 .scannerwork
 .vscode
+env/
