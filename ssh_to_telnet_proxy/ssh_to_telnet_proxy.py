@@ -69,6 +69,7 @@ class TelnetConnection(Telnet):
     channel : paramiko.Channel()
         SSH channel to forward data to
     """
+
     def __init__(self, target, telnet_port, timeout=10, channel=None):
         super().__init__(target, telnet_port, timeout=10)
         self.chan = channel
@@ -82,7 +83,7 @@ class TelnetConnection(Telnet):
     def mt_interact(self):
         """
         Originally this method would initiate terminal-like connection.
-        After modifications, this method forwards traffic between SSH and Telnet connections     
+        After modifications, this method forwards traffic between SSH and Telnet connections
         """
         logger.debug("multithread")
         _thread.start_new_thread(self.listener, ())
@@ -165,6 +166,7 @@ class Server(paramiko.ServerInterface):
     """
     Paramiko server interface. Taken straight from the demo_server.py from Paramiko repository
     """
+
     def __init__(self):
         self.event = threading.Event()
         self.user = ""
@@ -230,6 +232,24 @@ class Server(paramiko.ServerInterface):
 
 # Pending of making a FSM to control login
 def start_telnet(target, telnet_port, timeout, channel, un, passwd):
+    """
+    Creates telnet session to specified device and proxies it to ssh server channel
+
+    Attributes
+    ----------
+    target : str
+        IP or FQDN of system to connect to
+    telnet_port : int
+        Port for telnet connection
+    timeout : int
+        Timeout for telnet connection
+    channel : paramiko.Channel()
+        Server channel to proxy data to and from
+    un : str
+        Username for telnet connection
+    passwd : str
+        Password for telnet connection
+    """
     logger.debug("Entering function")
     try:
         tn = TelnetConnection(target, telnet_port, timeout=timeout, channel=channel)
@@ -255,6 +275,26 @@ def start_telnet(target, telnet_port, timeout, channel, un, passwd):
 
 
 def start_cml_ssh(target, server_channel, un, passwd, port=22, device_str=""):
+    """
+    Creates ssh session to specified CML server, opens connection to virtual device if specified
+    and proxies this connection to the SSH client
+
+    Attributes
+    ----------
+    target : str
+        IP or FQDN of CML system to connect to
+    server_channel : paramiko.Channel()
+        Server channel to proxy data to and from
+    un : str
+        Username for CML connection
+    pw : str
+        Password for CML connection
+    port : int
+        Port for CML connection
+    device_str : int
+        Virual device to open connection to, i.e. /lab_1/n0/0
+
+    """
     proxy_client = paramiko.SSHClient()
     proxy_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     logger.debug("Connecting to {0}:{1} with un {2}".format(target, port, un))
@@ -263,9 +303,9 @@ def start_cml_ssh(target, server_channel, un, passwd, port=22, device_str=""):
             target, port=port, username=un, password=passwd, look_for_keys=False
         )
     except paramiko.ssh_exception.AuthenticationException:
-        logger.info("Failed to connect to {} - Authentication Error".format(target))
+        logger.debug("Failed to connect to {} - Authentication Error".format(target))
         server_channel.sendall(
-            "Failed to connect to {} - Authentication Error\n".format(target)
+            "Failed to connect to {} - Authentication Error\r\n".format(target)
         )
         server_channel.close()
         return
@@ -278,11 +318,22 @@ def start_cml_ssh(target, server_channel, un, passwd, port=22, device_str=""):
         If device_str is passed, I need to open terminal connection to the specified virtual device
         Then I need to ensure I get to devoce promtp (i.e. Router> or Router#) and pass it along,
         otherwise automation tools like Ansible fail.
+        This function blindly sends 2 carriage returns in hopes of getting to the prompt and it has been reliably working for me in my lab
+        If it fails, some while loop with looking for prompt with > or # that is not console> may be required
         """
         client_channel.send(" open {}\n".format(device_str))
+        logger.debug("Connecting to device {}".format(device_str))
         time.sleep(1)
         if client_channel.recv_ready():
             line = decode_bytes(client_channel.recv(BUF_LEN))
+            if "not found!" in line:
+                server_channel.sendall(
+                    "Could not connect to device {}\r\n".format(device_str)
+                )
+                logger.debug("Could not connect to device {}\r\n".format(device_str))
+                server_channel.close()
+                client_channel.close()
+                return
         client_channel.send("\r\n".format(device_str))
         time.sleep(1)
         if client_channel.recv_ready():
@@ -372,15 +423,18 @@ def start_ssh_session_thread(client=None, host_key=None, cml=None):
         target = server.user.split("@")[-1]
         if ":" in target:
             telnet_port = int(target.split(":")[-1])
-            ssh_port = telnet_port
             target = ":".join(target.split(":")[:-1])
         else:
             telnet_port = 23
-            ssh_port = 22
         un = "@".join(server.user.split("@")[:-1])
         logger.debug("un: <{}>; user: {}".format(un, server.user))
         if cml:
-            # to handle case when no device name is provided
+            if ":" in cml:
+                ssh_port = int(cml.split(":")[-1])
+                cml = ":".join(cml.split(":")[:-1])
+            else:
+                ssh_port = 22
+            # to handle case when no device string is provided
             if not un:
                 un = target
                 target = ""
