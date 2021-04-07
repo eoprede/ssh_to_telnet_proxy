@@ -6,3 +6,4 @@ build/
 .scannerwork
 .vscode
 env/
+ssh_to_telnet_proxy.log

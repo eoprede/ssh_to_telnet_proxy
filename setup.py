@@ -17,7 +17,7 @@ setuptools.setup(
     },
     install_requires=[
         'paramiko',
-        'pywin32 ; platform_system=="Windows"'
+        'pywin32 ; platform_system=="Windows"',
         'python-gssapi ; platform_system=="Linux"'
     ],
 
