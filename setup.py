@@ -5,7 +5,7 @@ with open("README.md", "r") as fd:
 
 setuptools.setup(
     name="ssh_to_telnet_proxy",
-    version="0.1.4rc3",
+    version="0.2",
     description="SSH to telnet proxy",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -17,7 +17,8 @@ setuptools.setup(
     },
     install_requires=[
         'paramiko',
-        'gssapi'
+        'pywin32 ; platform_system=="Windows"',
+        'python-gssapi ; platform_system=="Linux"'
     ],
 
     classifiers=[
