@@ -124,3 +124,18 @@ WantedBy=multi-user.target
 
 This code is fully functional in Windows as well, however it has some kinks due to some windows-specific library implementations. Most annoying issue is that when listening to socket connection, windows will not process any keyboard interrupts. So if you started your server and wanted to quit it, you'd have to issue Ctrl-C in your script window, then try to SSH to its port and only then it would close.
 
+## Install as a service
+
+There are multiple ways of installing python script as a service, but probably the easiest way is to use [NSSM](https://nssm.cc/) 
+
+Download the tool, unpack it and then start service install
+```
+nssm.exe install SSHTelnetProxy
+```
+Then fill out the service details
+```
+Application path: path to your python.exe, either your system install or virtual environment/Scripts folder if you are using one
+Startup directory: path to the folder where python.exe you are using is
+Arguments: full path to ssh_to_telnet_proxy.py as well as all the arguments you want to use
+```
+No other configuration is necessary. Service is installed and can be used like any other normal Windows Service.
